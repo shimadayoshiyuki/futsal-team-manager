@@ -2,12 +2,33 @@
 
 フットサルチームのスケジュール共有・出欠管理を簡単に行えるWebアプリケーションです。
 
+## 🌐 本番環境
+
+- **アプリURL**: https://futsal-team-manager-kappa.vercel.app
+- **GitHubリポジトリ**: https://github.com/shimadayoshiyuki/futsal-team-manager
+
+## ✅ ログイン方法
+
+### パスワードログイン（推奨）
+
+1. https://futsal-team-manager-kappa.vercel.app/auth/login にアクセス
+2. 「パスワードでログイン」をクリック
+3. メールアドレスとパスワードを入力
+4. 「ログイン」をクリック
+
+### メールリンクログイン
+
+1. ログインページでメールアドレスを入力
+2. 「ログインリンクを送信」をクリック
+3. 受信したメールのリンクをクリック（5分以内）
+
 ## 主な機能
 
 ### ✅ 実装済み機能
 
 1. **ユーザー認証**
-   - メールアドレス認証（Supabase Auth）
+   - メールアドレス + パスワード認証
+   - メールリンク認証（Magic Link）
    - 初回ログイン時にニックネームと背番号を登録
    - セキュアなログイン・ログアウト
 
@@ -67,7 +88,7 @@
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/yourusername/futsal-team-manager.git
+git clone https://github.com/shimadayoshiyuki/futsal-team-manager.git
 cd futsal-team-manager
 ```
 
@@ -116,12 +137,18 @@ npm run dev
 Supabaseダッシュボードの SQL Editor で実行:
 
 ```sql
--- 自分のメールアドレスを確認
-SELECT id, email FROM auth.users WHERE email = 'your-email@example.com';
-
 -- 管理者権限を付与
 UPDATE public.users 
 SET is_admin = TRUE 
+WHERE email = 'your-email@example.com';
+```
+
+パスワードを設定する場合（パスワードログインを有効にする）:
+
+```sql
+-- パスワードを設定
+UPDATE auth.users 
+SET encrypted_password = crypt('your_password', gen_salt('bf'))
 WHERE email = 'your-email@example.com';
 ```
 
@@ -246,11 +273,21 @@ futsal-team-manager/
 ## トラブルシューティング
 
 ### ログインできない
+
+**メールリンクログインの場合:**
 - メールの受信箱とスパムフォルダを確認
+- リンクが期限切れ（5分以内にクリック）
 - Supabaseの認証設定を確認
+
+**パスワードログインの場合:**
+- パスワードが設定されているか確認（SQLで確認）
+- メールアドレスが正しいか確認
 
 ### 管理者権限がない
 - SQLで `is_admin` フラグを手動で設定
+```sql
+UPDATE public.users SET is_admin = TRUE WHERE email = 'your-email@example.com';
+```
 
 ### 通知が届かない
 - `.env.local` の `LINE_NOTIFY_TOKEN` を確認
