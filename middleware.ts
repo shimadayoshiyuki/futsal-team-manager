@@ -2,6 +2,15 @@ import { updateSession } from '@/lib/supabase/middleware'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // 一時的にmiddlewareを無効化（デバッグ用）
+  console.log('[MIDDLEWARE] Path:', request.nextUrl.pathname)
+  
+  // authルート以外はmiddlewareをスキップ
+  if (!request.nextUrl.pathname.startsWith('/auth')) {
+    console.log('[MIDDLEWARE] Bypassing middleware for:', request.nextUrl.pathname)
+    return NextResponse.next()
+  }
+  
   return await updateSession(request)
 }
 
