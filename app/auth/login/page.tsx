@@ -9,12 +9,41 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [usePassword, setUsePassword] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
   const supabase = createClient()
 
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setMessage('')
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) throw error
+
+      setMessage('ログイン成功！リダイレクトしています...')
+      window.location.href = '/'
+    } catch (error: any) {
+      setMessage(error.message || 'ログインに失敗しました')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (usePassword) {
+      return handlePasswordLogin(e)
+    }
+    
     setIsLoading(true)
     setMessage('')
 
@@ -62,11 +91,42 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             </div>
+            
+            {usePassword && (
+              <div className="space-y-2">
+                <Label htmlFor="password">パスワード</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="パスワード"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required={usePassword}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+            
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'ログインメールを送信中...' : 'ログインリンクを送信'}
+              {isLoading 
+                ? (usePassword ? 'ログイン中...' : 'ログインメールを送信中...') 
+                : (usePassword ? 'ログイン' : 'ログインリンクを送信')}
             </Button>
+            
+            <Button 
+              type="button" 
+              variant="ghost" 
+              className="w-full text-sm"
+              onClick={() => {
+                setUsePassword(!usePassword)
+                setMessage('')
+              }}
+            >
+              {usePassword ? 'メールリンクでログイン' : 'パスワードでログイン'}
+            </Button>
+            
             {message && (
-              <p className={`text-sm text-center ${message.includes('送信しました') ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`text-sm text-center ${message.includes('成功') || message.includes('送信しました') ? 'text-green-600' : 'text-red-600'}`}>
                 {message}
               </p>
             )}
