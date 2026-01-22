@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { ja } from 'date-fns/locale/ja'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, MapPin, Users, DollarSign, Clock } from 'lucide-react'
 
