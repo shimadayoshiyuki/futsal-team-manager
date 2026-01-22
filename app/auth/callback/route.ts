@@ -6,24 +6,38 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
 
+  console.log('[AUTH CALLBACK] Starting authentication callback')
+  console.log('[AUTH CALLBACK] Code present:', !!code)
+  console.log('[AUTH CALLBACK] Origin:', origin)
+
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    console.log('[AUTH CALLBACK] Exchanging code for session...')
     
-    if (!error) {
-      const forwardedHost = request.headers.get('x-forwarded-host')
-      const isLocalEnv = process.env.NODE_ENV === 'development'
-      
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (error) {
+      console.error('[AUTH CALLBACK] Error exchanging code:', error.message)
+      return NextResponse.redirect(`${origin}/auth/login?error=${encodeURIComponent(error.message)}`)
     }
+
+    console.log('[AUTH CALLBACK] Session exchange successful')
+    console.log('[AUTH CALLBACK] User ID:', data.user?.id)
+    console.log('[AUTH CALLBACK] User Email:', data.user?.email)
+    
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const isLocalEnv = process.env.NODE_ENV === 'development'
+    
+    const redirectUrl = isLocalEnv 
+      ? `${origin}${next}`
+      : forwardedHost 
+        ? `https://${forwardedHost}${next}` 
+        : `${origin}${next}`
+    
+    console.log('[AUTH CALLBACK] Redirecting to:', redirectUrl)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  // エラー時はログインページへ
-  return NextResponse.redirect(`${origin}/auth/login`)
+  console.error('[AUTH CALLBACK] No code provided')
+  return NextResponse.redirect(`${origin}/auth/login?error=no_code`)
 }
