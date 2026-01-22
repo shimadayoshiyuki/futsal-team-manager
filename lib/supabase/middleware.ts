@@ -38,14 +38,14 @@ export async function updateSession(request: NextRequest) {
   // プロフィール未設定チェック（認証済みだがプロフィールがない場合）
   if (user && !request.nextUrl.pathname.startsWith('/profile/setup') && 
       !request.nextUrl.pathname.startsWith('/auth')) {
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('users')
       .select('display_name')
       .eq('id', user.id)
       .single()
 
-    if (!profile) {
-      // プロフィール未設定の場合、セットアップページへリダイレクト
+    // プロフィールが存在しない、またはdisplay_nameが空の場合
+    if (!profile || !profile.display_name) {
       const url = request.nextUrl.clone()
       url.pathname = '/profile/setup'
       return NextResponse.redirect(url)
