@@ -6,28 +6,20 @@ import Header from '@/components/header'
 export default async function HomePage() {
   const supabase = await createClient()
   
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
-  console.log('[HOME PAGE] User:', user?.id, user?.email)
-  console.log('[HOME PAGE] User Error:', userError)
+  const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    console.log('[HOME PAGE] No user found, redirecting to login')
     redirect('/auth/login')
   }
 
   // ユーザープロフィールの取得
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  console.log('[HOME PAGE] Profile:', profile?.display_name)
-  console.log('[HOME PAGE] Profile Error:', profileError)
-
   if (!profile) {
-    console.log('[HOME PAGE] No profile found, redirecting to setup')
     redirect('/profile/setup')
   }
 
