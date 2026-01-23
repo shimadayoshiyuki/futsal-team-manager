@@ -19,7 +19,12 @@ export default function Header({ user }: HeaderProps) {
   const supabase = createClient()
 
   const handleLogout = async () => {
+    // Supabase認証のログアウト
     await supabase.auth.signOut()
+    
+    // チームログインのセッションCookieを削除
+    document.cookie = 'team_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    
     router.push('/auth/login')
     router.refresh()
   }
