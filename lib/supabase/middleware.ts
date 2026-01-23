@@ -55,13 +55,15 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = user || isTeamLoggedIn
 
   // プロフィール未設定チェック（Supabase認証済みだがプロフィールがない場合）
-  if (user && !request.nextUrl.pathname.startsWith('/profile/setup') && 
+  // チームログインの場合はスキップ
+  if (user && !isTeamLoggedIn && 
+      !request.nextUrl.pathname.startsWith('/profile/setup') && 
       !request.nextUrl.pathname.startsWith('/auth')) {
-    const { data: profile, error } = await supabase
+    const { data: profile } = await supabase
       .from('users')
       .select('display_name')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     // プロフィールが存在しない、またはdisplay_nameが空の場合
     if (!profile || !profile.display_name) {
@@ -83,7 +85,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // 認証済みユーザーがログインページにアクセスしようとした場合
-  if (isAuthenticated && request.nextUrl.pathname.startsWith('/auth/login')) {
+  if (isAuthenticated && request.nextUrl.pathname === '/auth/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
