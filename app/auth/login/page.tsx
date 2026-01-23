@@ -26,15 +26,7 @@ export default function LoginPage() {
     setMessage('')
 
     try {
-      // 1. チーム設定を取得
-      const { data: teamSettings, error: teamError } = await supabase
-        .from('team_settings')
-        .select('*')
-        .single()
-
-      if (teamError) throw new Error('チーム設定の取得に失敗しました')
-
-      // 2. パスワード検証（フロントエンドでの簡易チェック - 本番はバックエンドで）
+      // バックエンドAPIでパスワード検証
       const response = await fetch('/api/auth/team-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
