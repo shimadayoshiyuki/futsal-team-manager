@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { LogOut, Plus, User } from 'lucide-react'
+import { LogOut, Plus, User, Settings } from 'lucide-react'
 
 interface HeaderProps {
   user: {
@@ -47,12 +47,20 @@ export default function Header({ user }: HeaderProps) {
             </div>
             
             {user.is_admin && (
-              <Link href="/events/create">
-                <Button size="sm" className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">イベント作成</span>
-                </Button>
-              </Link>
+              <>
+                <Link href="/events/create">
+                  <Button size="sm" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">イベント作成</span>
+                  </Button>
+                </Link>
+                <Link href="/settings">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    <span className="hidden sm:inline">設定</span>
+                  </Button>
+                </Link>
+              </>
             )}
             
             <Button 
