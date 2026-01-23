@@ -44,9 +44,9 @@ export default function CreateEventPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('ユーザーが見つかりません')
 
-      // 日時の結合
-      const startDateTime = `${formData.start_date}T${formData.start_time}:00`
-      const endDateTime = `${formData.start_date}T${formData.end_time}:00`
+      // 日時の結合（日本時間として扱う）
+      const startDateTime = `${formData.start_date}T${formData.start_time}:00+09:00`
+      const endDateTime = `${formData.start_date}T${formData.end_time}:00+09:00`
 
       const { error: insertError } = await supabase
         .from('events')

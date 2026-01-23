@@ -46,16 +46,28 @@ export default function EditEventPage() {
       if (error) throw error
 
       if (data) {
+        // タイムゾーンを考慮して日本時間で取得
         const startDate = new Date(data.start_time)
         const endDate = new Date(data.end_time)
+        
+        // 日本時間（JST）に変換
+        const jstStartDate = new Date(startDate.getTime())
+        const jstEndDate = new Date(endDate.getTime())
+        
+        // YYYY-MM-DD形式
+        const dateStr = jstStartDate.toLocaleDateString('sv-SE') // ISO 8601 format
+        
+        // HH:MM形式
+        const startTimeStr = jstStartDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })
+        const endTimeStr = jstEndDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })
         
         setFormData({
           title: data.title || '',
           description: data.description || '',
           location: data.location || '',
-          start_date: startDate.toISOString().split('T')[0],
-          start_time: startDate.toTimeString().slice(0, 5),
-          end_time: endDate.toTimeString().slice(0, 5),
+          start_date: dateStr,
+          start_time: startTimeStr,
+          end_time: endTimeStr,
           max_participants: data.max_participants?.toString() || '',
           participation_fee: data.participation_fee?.toString() || '0',
         })
@@ -80,9 +92,9 @@ export default function EditEventPage() {
     setError('')
 
     try {
-      // 日時の結合
-      const startDateTime = `${formData.start_date}T${formData.start_time}:00`
-      const endDateTime = `${formData.start_date}T${formData.end_time}:00`
+      // 日時の結合（日本時間として扱う）
+      const startDateTime = `${formData.start_date}T${formData.start_time}:00+09:00`
+      const endDateTime = `${formData.start_date}T${formData.end_time}:00+09:00`
 
       const { error: updateError } = await supabase
         .from('events')
