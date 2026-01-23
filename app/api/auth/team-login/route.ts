@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
@@ -78,8 +79,9 @@ export async function POST(request: Request) {
     if (existingUser) {
       userId = existingUser.id
     } else {
-      // 新規ユーザー作成
-      const { data: newUser, error: createError } = await supabase
+      // 新規ユーザー作成（RLSをバイパスするため管理者クライアントを使用）
+      const adminClient = createAdminClient()
+      const { data: newUser, error: createError } = await adminClient
         .from('users')
         .insert({
           display_name: nickname,
