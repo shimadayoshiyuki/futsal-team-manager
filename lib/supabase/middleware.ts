@@ -35,7 +35,26 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // プロフィール未設定チェック（認証済みだがプロフィールがない場合）
+  // チームログインのセッションをチェック
+  const teamSession = request.cookies.get('team_session')
+  let isTeamLoggedIn = false
+  
+  if (teamSession) {
+    try {
+      const session = JSON.parse(teamSession.value)
+      // セッションの有効期限をチェック
+      if (session.expiresAt && new Date(session.expiresAt) > new Date()) {
+        isTeamLoggedIn = true
+      }
+    } catch (e) {
+      // JSON parse error - invalid session
+    }
+  }
+
+  // Supabase認証またはチームログインのいずれかでログイン済み
+  const isAuthenticated = user || isTeamLoggedIn
+
+  // プロフィール未設定チェック（Supabase認証済みだがプロフィールがない場合）
   if (user && !request.nextUrl.pathname.startsWith('/profile/setup') && 
       !request.nextUrl.pathname.startsWith('/auth')) {
     const { data: profile, error } = await supabase
@@ -54,7 +73,7 @@ export async function updateSession(request: NextRequest) {
 
   // 未認証ユーザーが保護されたルートにアクセスしようとした場合
   if (
-    !user &&
+    !isAuthenticated &&
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/login')
   ) {
@@ -64,7 +83,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // 認証済みユーザーがログインページにアクセスしようとした場合
-  if (user && request.nextUrl.pathname.startsWith('/auth/login')) {
+  if (isAuthenticated && request.nextUrl.pathname.startsWith('/auth/login')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
