@@ -81,9 +81,14 @@ export async function POST(request: Request) {
     } else {
       // 新規ユーザー作成（RLSをバイパスするため管理者クライアントを使用）
       const adminClient = createAdminClient()
+      
+      // UUIDを生成
+      const newUserId = crypto.randomUUID()
+      
       const { data: newUser, error: createError } = await adminClient
         .from('users')
         .insert({
+          id: newUserId,
           display_name: nickname,
           jersey_number: jerseyNumber || null,
           email: null, // メール不要
