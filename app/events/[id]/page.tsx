@@ -4,26 +4,61 @@ import EventDetail from '@/components/event-detail'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
+import { cookies } from 'next/headers'
 
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
   
+  // Supabase Auth チェック
   const { data: { user } } = await supabase.auth.getUser()
   
-  if (!user) {
+  // チームログインセッションチェック
+  const cookieStore = await cookies()
+  const teamSession = cookieStore.get('team_session')
+  
+  let userId: string
+  let profile = null
+  
+  if (user) {
+    // Supabase Auth ユーザー
+    userId = user.id
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    
+    profile = data
+    
+    if (!profile) {
+      redirect('/profile/setup')
+    }
+  } else if (teamSession) {
+    // チームログインユーザー
+    try {
+      const session = JSON.parse(teamSession.value)
+      userId = session.userId
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.userId)
+        .single()
+      
+      profile = data
+      
+      if (!profile) {
+        // セッションが無効
+        cookieStore.delete('team_session')
+        redirect('/auth/login')
+      }
+    } catch (error) {
+      cookieStore.delete('team_session')
+      redirect('/auth/login')
+    }
+  } else {
+    // 未認証
     redirect('/auth/login')
-  }
-
-  // ユーザープロフィールの取得
-  const { data: profile } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) {
-    redirect('/profile/setup')
   }
 
   // イベント詳細の取得
@@ -55,7 +90,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     .from('attendances')
     .select('*')
     .eq('event_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single()
 
   return (
@@ -72,7 +107,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           event={event}
           attendances={attendances || []}
           myAttendance={myAttendance}
-          userId={user.id}
+          userId={userId}
           isAdmin={profile.is_admin}
         />
       </div>
