@@ -22,11 +22,19 @@ export default function Header({ user }: HeaderProps) {
     // Supabase認証のログアウト
     await supabase.auth.signOut()
     
-    // チームログインのセッションCookieを削除
-    document.cookie = 'team_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    // チームログインのセッションCookieを削除（複数の方法で試す）
+    // 方法1: フロントエンドで削除
+    document.cookie = 'team_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
     
-    router.push('/auth/login')
-    router.refresh()
+    // 方法2: APIルート経由で削除
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (e) {
+      // エラーを無視
+    }
+    
+    // ページをリロードしてログインページへ
+    window.location.href = '/auth/login'
   }
 
   return (
