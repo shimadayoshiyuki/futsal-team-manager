@@ -6,6 +6,8 @@ export async function POST(request: Request) {
   try {
     const { nickname, jerseyNumber, teamPassword } = await request.json()
 
+    console.log('[Team Login] Request:', { nickname, jerseyNumber, hasPassword: !!teamPassword })
+
     if (!nickname || !teamPassword) {
       return NextResponse.json(
         { error: 'ニックネームとパスワードは必須です' },
@@ -21,9 +23,14 @@ export async function POST(request: Request) {
       .select('team_password_hash, app_title')
       .single()
 
+    console.log('[Team Login] Team settings:', { 
+      found: !!teamSettings, 
+      error: settingsError?.message 
+    })
+
     if (settingsError || !teamSettings) {
       return NextResponse.json(
-        { error: 'チーム設定が見つかりません' },
+        { error: `チーム設定が見つかりません: ${settingsError?.message}` },
         { status: 500 }
       )
     }
@@ -35,21 +42,20 @@ export async function POST(request: Request) {
         stored_hash: teamSettings.team_password_hash,
       })
 
-    if (passwordError) {
-      // RPCが存在しない場合は、直接SQLで検証
-      const { data: directCheck } = await supabase
-        .from('team_settings')
-        .select('team_password_hash')
-        .eq('team_password_hash', supabase.rpc('crypt', { password: teamPassword, salt: teamSettings.team_password_hash }))
-        .single()
+    console.log('[Team Login] Password check:', { 
+      passwordCheck, 
+      error: passwordError?.message 
+    })
 
-      if (!directCheck) {
-        return NextResponse.json(
-          { error: 'パスワードが正しくありません' },
-          { status: 401 }
-        )
-      }
-    } else if (!passwordCheck) {
+    if (passwordError) {
+      console.error('[Team Login] RPC error:', passwordError)
+      return NextResponse.json(
+        { error: `パスワード検証エラー: ${passwordError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!passwordCheck) {
       return NextResponse.json(
         { error: 'パスワードが正しくありません' },
         { status: 401 }
@@ -67,6 +73,8 @@ export async function POST(request: Request) {
       .eq('jersey_number', jerseyNumber || null)
       .maybeSingle()
 
+    console.log('[Team Login] Existing user:', { found: !!existingUser })
+
     if (existingUser) {
       userId = existingUser.id
     } else {
@@ -82,9 +90,14 @@ export async function POST(request: Request) {
         .select('id')
         .single()
 
+      console.log('[Team Login] New user:', { 
+        created: !!newUser, 
+        error: createError?.message 
+      })
+
       if (createError || !newUser) {
         return NextResponse.json(
-          { error: 'ユーザーの作成に失敗しました' },
+          { error: `ユーザーの作成に失敗しました: ${createError?.message}` },
           { status: 500 }
         )
       }
@@ -111,6 +124,8 @@ export async function POST(request: Request) {
       path: '/',
     })
 
+    console.log('[Team Login] Success:', { userId, nickname })
+
     return NextResponse.json({
       success: true,
       user: {
@@ -120,7 +135,7 @@ export async function POST(request: Request) {
       },
     })
   } catch (error: any) {
-    console.error('Team login error:', error)
+    console.error('[Team Login] Error:', error)
     return NextResponse.json(
       { error: error.message || 'ログイン処理でエラーが発生しました' },
       { status: 500 }
