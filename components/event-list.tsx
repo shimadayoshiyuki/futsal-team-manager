@@ -31,6 +31,7 @@ interface Attendance {
 interface EventListProps {
   events: Event[]
   myAttendances: Attendance[]
+  allAttendances: any[]
   isAdmin: boolean
 }
 
@@ -57,9 +58,16 @@ const getStatusBadge = (status: Attendance['status']) => {
   }
 }
 
-export default function EventList({ events, myAttendances, isAdmin }: EventListProps) {
+export default function EventList({ events, myAttendances, allAttendances, isAdmin }: EventListProps) {
   const getMyStatus = (eventId: string) => {
     return myAttendances.find(a => a.event_id === eventId)
+  }
+  
+  const getEventAttendees = (eventId: string) => {
+    return allAttendances
+      .filter(a => a.event_id === eventId && a.status === 'attending')
+      .map(a => a.users)
+      .filter(Boolean)
   }
 
   if (events.length === 0) {
@@ -82,6 +90,7 @@ export default function EventList({ events, myAttendances, isAdmin }: EventListP
       {events.map((event) => {
         const myStatus = getMyStatus(event.id)
         const isFull = event.max_participants && event.total_participants >= event.max_participants
+        const attendees = getEventAttendees(event.id)
         
         return (
           <Link key={event.id} href={`/events/${event.id}`}>
@@ -119,6 +128,30 @@ export default function EventList({ events, myAttendances, isAdmin }: EventListP
                     <MapPin className="w-4 h-4 mr-2" />
                     <span>{event.location}</span>
                   </div>
+                  
+                  {/* 参加者名表示 */}
+                  {attendees.length > 0 && (
+                    <div className="flex items-start text-sm text-gray-600 pt-2">
+                      <Users className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-green-600" />
+                      <div className="flex-1">
+                        <span className="font-medium text-green-600">参加予定: </span>
+                        <span className="text-gray-700">
+                          {attendees.slice(0, 5).map((user: any, index: number) => (
+                            <span key={user.id}>
+                              {user.display_name}
+                              {user.jersey_number && (
+                                <span className="text-xs text-gray-500">({user.jersey_number})</span>
+                              )}
+                              {index < Math.min(attendees.length, 5) - 1 && ', '}
+                            </span>
+                          ))}
+                          {attendees.length > 5 && (
+                            <span className="text-gray-500"> 他{attendees.length - 5}名</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="flex items-center justify-between mt-4 pt-3 border-t">
                     <div className="flex items-center space-x-4">
