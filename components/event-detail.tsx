@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Calendar, MapPin, Users, DollarSign, Clock, UserPlus, Trash2 } from 'lucide-react'
+import { Calendar, MapPin, Users, DollarSign, Clock, UserPlus, Trash2, Edit } from 'lucide-react'
 
 interface Event {
   id: string
@@ -141,15 +141,26 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
           <div className="flex items-start justify-between">
             <CardTitle className="text-3xl">{event.title}</CardTitle>
             {isAdmin && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteEvent}
-                disabled={isLoading}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                削除
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/events/${event.id}/edit`)}
+                  disabled={isLoading}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  編集
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteEvent}
+                  disabled={isLoading}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  削除
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>
