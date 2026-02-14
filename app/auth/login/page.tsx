@@ -163,7 +163,7 @@ export default function LoginPage() {
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full transition-all active:scale-95" disabled={isLoading}>
                   {isLoading ? 'ログイン中...' : 'ログイン'}
                 </Button>
                 

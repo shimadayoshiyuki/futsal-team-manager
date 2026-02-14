@@ -72,7 +72,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     notFound()
   }
 
-  // 参加者一覧の取得
+  // 参加者一覧の取得（全ステータス）
   const { data: attendances } = await supabase
     .from('attendances')
     .select(`
@@ -83,7 +83,6 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       )
     `)
     .eq('event_id', id)
-    .eq('status', 'attending')
 
   // 自分の出欠情報の取得
   const { data: myAttendance } = await supabase

@@ -266,7 +266,7 @@ export default function EditEventPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full transition-all active:scale-95" disabled={isLoading}>
                 {isLoading ? '更新中...' : 'イベントを更新'}
               </Button>
 

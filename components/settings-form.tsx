@@ -131,7 +131,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="transition-all active:scale-95">
               {isLoading ? '更新中...' : 'タイトルを更新'}
             </Button>
           </form>
@@ -184,7 +184,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="transition-all active:scale-95">
               {isLoading ? '更新中...' : 'パスワードを更新'}
             </Button>
           </form>

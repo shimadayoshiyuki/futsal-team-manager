@@ -210,7 +210,7 @@ export default function CreateEventPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full transition-all active:scale-95" disabled={isLoading}>
                 {isLoading ? '作成中...' : 'イベントを作成'}
               </Button>
 

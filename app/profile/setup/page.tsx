@@ -112,7 +112,7 @@ export default function ProfileSetupPage() {
               </p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full transition-all active:scale-95" disabled={isLoading}>
               {isLoading ? '登録中...' : '登録して始める'}
             </Button>
 

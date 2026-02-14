@@ -84,9 +84,15 @@ export default async function HomePage() {
     .select('event_id, status, comment')
     .eq('user_id', profile.id)
 
+  // チーム設定を取得
+  const { data: teamSettings } = await supabase
+    .from('team_settings')
+    .select('app_title')
+    .single()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Header user={profile} />
+      <Header user={profile} appTitle={teamSettings?.app_title || 'フットサルチーム管理'} />
       <main className="container mx-auto px-4 py-6">
         <DashboardView
           events={events || []} 

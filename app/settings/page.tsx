@@ -50,7 +50,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Header user={profile} />
+      <Header user={profile} appTitle={teamSettings?.app_title || 'フットサルチーム管理'} />
       <main className="container mx-auto px-4 py-6 max-w-2xl">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">チーム設定</h1>
         <SettingsForm initialSettings={teamSettings} />

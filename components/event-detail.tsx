@@ -83,9 +83,13 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
       }
 
       router.refresh()
+      
+      // 少し遅延させてからローディング解除（視覚的フィードバック）
+      setTimeout(() => {
+        setIsLoading(false)
+      }, 300)
     } catch (error: any) {
       alert(error.message || 'エラーが発生しました')
-    } finally {
       setIsLoading(false)
     }
   }
@@ -147,6 +151,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
                   size="sm"
                   onClick={() => router.push(`/events/${event.id}/edit`)}
                   disabled={isLoading}
+                  className="transition-all active:scale-95"
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   編集
@@ -156,9 +161,10 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
                   size="sm"
                   onClick={handleDeleteEvent}
                   disabled={isLoading}
+                  className="transition-all active:scale-95"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  削除
+                  {isLoading ? '削除中...' : '削除'}
                 </Button>
               </div>
             )}
@@ -241,8 +247,9 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
                   size="sm"
                   onClick={handleUpdateGuestCount}
                   disabled={isLoading}
+                  className="transition-all active:scale-95"
                 >
-                  保存
+                  {isLoading ? '保存中...' : '保存'}
                 </Button>
                 <Button
                   size="sm"
@@ -252,6 +259,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
                     setGuestCount(event.guest_count.toString())
                   }}
                   disabled={isLoading}
+                  className="transition-all active:scale-95"
                 >
                   キャンセル
                 </Button>
@@ -265,6 +273,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
                   size="sm"
                   variant="outline"
                   onClick={() => setIsEditingGuest(true)}
+                  className="transition-all active:scale-95"
                 >
                   編集
                 </Button>
@@ -288,25 +297,25 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
               variant={currentStatus === 'attending' ? 'default' : 'outline'}
               onClick={() => handleAttendance('attending')}
               disabled={isLoading}
-              className="h-16 text-base font-semibold"
+              className="h-16 text-base font-semibold transition-all active:scale-95 active:opacity-80"
             >
-              参加
+              {isLoading ? '登録中...' : '参加'}
             </Button>
             <Button
               variant={currentStatus === 'not_attending' ? 'destructive' : 'outline'}
               onClick={() => handleAttendance('not_attending')}
               disabled={isLoading}
-              className="h-16 text-base font-semibold"
+              className="h-16 text-base font-semibold transition-all active:scale-95 active:opacity-80"
             >
-              不参加
+              {isLoading ? '登録中...' : '不参加'}
             </Button>
             <Button
               variant={currentStatus === 'undecided' ? 'secondary' : 'outline'}
               onClick={() => handleAttendance('undecided')}
               disabled={isLoading}
-              className="h-16 text-base font-semibold"
+              className="h-16 text-base font-semibold transition-all active:scale-95 active:opacity-80"
             >
-              未定
+              {isLoading ? '登録中...' : '未定'}
             </Button>
           </div>
 
@@ -327,40 +336,122 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
         </CardContent>
       </Card>
 
-      {/* 参加者一覧 */}
+      {/* 出欠確認セクション */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">参加者一覧（{event.attending_count}人）</CardTitle>
+          <CardTitle className="text-lg">出欠確認</CardTitle>
         </CardHeader>
-        <CardContent>
-          {attendances.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">まだ参加者がいません</p>
-          ) : (
-            <div className="space-y-3">
-              {attendances.map((attendance) => (
-                <div
-                  key={attendance.id}
-                  className="flex items-start justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <div className="font-medium">
-                      {attendance.users.display_name}
-                      {attendance.users.jersey_number !== null && (
-                        <span className="ml-2 text-blue-600">
-                          #{attendance.users.jersey_number}
-                        </span>
+        <CardContent className="space-y-6">
+          {/* 参加者一覧 */}
+          <div>
+            <h3 className="font-semibold text-green-700 mb-3 flex items-center">
+              <span className="bg-green-100 px-3 py-1 rounded-full text-sm">
+                参加（{event.attending_count}人）
+              </span>
+            </h3>
+            {attendances.filter(a => a.status === 'attending').length === 0 ? (
+              <p className="text-gray-400 text-sm ml-4">まだ参加者がいません</p>
+            ) : (
+              <div className="space-y-2">
+                {attendances.filter(a => a.status === 'attending').map((attendance) => (
+                  <div
+                    key={attendance.id}
+                    className="flex items-start justify-between p-3 bg-green-50 rounded-lg border border-green-100"
+                  >
+                    <div>
+                      <div className="font-medium text-green-900">
+                        {attendance.users.display_name}
+                        {attendance.users.jersey_number !== null && (
+                          <span className="ml-2 text-blue-600">
+                            #{attendance.users.jersey_number}
+                          </span>
+                        )}
+                      </div>
+                      {attendance.comment && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {attendance.comment}
+                        </p>
                       )}
                     </div>
-                    {attendance.comment && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {attendance.comment}
-                      </p>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 不参加者一覧 */}
+          <div>
+            <h3 className="font-semibold text-red-700 mb-3 flex items-center">
+              <span className="bg-red-100 px-3 py-1 rounded-full text-sm">
+                不参加（{event.not_attending_count}人）
+              </span>
+            </h3>
+            {attendances.filter(a => a.status === 'not_attending').length === 0 ? (
+              <p className="text-gray-400 text-sm ml-4">不参加者はいません</p>
+            ) : (
+              <div className="space-y-2">
+                {attendances.filter(a => a.status === 'not_attending').map((attendance) => (
+                  <div
+                    key={attendance.id}
+                    className="flex items-start justify-between p-3 bg-red-50 rounded-lg border border-red-100"
+                  >
+                    <div>
+                      <div className="font-medium text-red-900">
+                        {attendance.users.display_name}
+                        {attendance.users.jersey_number !== null && (
+                          <span className="ml-2 text-blue-600">
+                            #{attendance.users.jersey_number}
+                          </span>
+                        )}
+                      </div>
+                      {attendance.comment && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {attendance.comment}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 未定者一覧 */}
+          <div>
+            <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
+              <span className="bg-gray-100 px-3 py-1 rounded-full text-sm">
+                未定（{event.undecided_count}人）
+              </span>
+            </h3>
+            {attendances.filter(a => a.status === 'undecided').length === 0 ? (
+              <p className="text-gray-400 text-sm ml-4">未定の人はいません</p>
+            ) : (
+              <div className="space-y-2">
+                {attendances.filter(a => a.status === 'undecided').map((attendance) => (
+                  <div
+                    key={attendance.id}
+                    className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {attendance.users.display_name}
+                        {attendance.users.jersey_number !== null && (
+                          <span className="ml-2 text-blue-600">
+                            #{attendance.users.jersey_number}
+                          </span>
+                        )}
+                      </div>
+                      {attendance.comment && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {attendance.comment}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

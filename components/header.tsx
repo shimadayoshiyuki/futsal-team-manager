@@ -12,9 +12,10 @@ interface HeaderProps {
     jersey_number: number | null
     is_admin: boolean
   }
+  appTitle?: string
 }
 
-export default function Header({ user }: HeaderProps) {
+export default function Header({ user, appTitle = 'フットサルチーム管理' }: HeaderProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -44,7 +45,7 @@ export default function Header({ user }: HeaderProps) {
           <Link href="/" className="flex items-center space-x-2">
             <span className="text-2xl">⚽</span>
             <h1 className="text-xl font-bold text-gray-900">
-              フットサルチーム管理
+              {appTitle}
             </h1>
           </Link>
           
@@ -62,13 +63,13 @@ export default function Header({ user }: HeaderProps) {
             {user.is_admin && (
               <>
                 <Link href="/events/create">
-                  <Button size="sm" className="gap-2">
+                  <Button size="sm" className="gap-2 transition-all active:scale-95">
                     <Plus className="w-4 h-4" />
                     <span className="hidden sm:inline">イベント作成</span>
                   </Button>
                 </Link>
                 <Link href="/settings">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 transition-all active:scale-95">
                     <Settings className="w-4 h-4" />
                     <span className="hidden sm:inline">設定</span>
                   </Button>
@@ -80,7 +81,7 @@ export default function Header({ user }: HeaderProps) {
               variant="outline" 
               size="sm" 
               onClick={handleLogout}
-              className="gap-2"
+              className="gap-2 transition-all active:scale-95"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">ログアウト</span>
