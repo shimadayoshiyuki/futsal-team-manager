@@ -70,6 +70,13 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
       .filter(Boolean)
   }
 
+  const getEventNonAttendees = (eventId: string) => {
+    return allAttendances
+      .filter(a => a.event_id === eventId && a.status === 'not_attending')
+      .map(a => a.users)
+      .filter(Boolean)
+  }
+
   if (events.length === 0) {
     return (
       <div className="text-center py-12">
@@ -91,6 +98,7 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
         const myStatus = getMyStatus(event.id)
         const isFull = event.max_participants && event.total_participants >= event.max_participants
         const attendees = getEventAttendees(event.id)
+        const nonAttendees = getEventNonAttendees(event.id)
         
         return (
           <Link key={event.id} href={`/events/${event.id}`}>
@@ -147,6 +155,30 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
                           ))}
                           {attendees.length > 5 && (
                             <span className="text-gray-500"> 他{attendees.length - 5}名</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 不参加者名表示 */}
+                  {nonAttendees.length > 0 && (
+                    <div className="flex items-start text-sm text-gray-600 pt-2">
+                      <Users className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-red-600" />
+                      <div className="flex-1">
+                        <span className="font-medium text-red-600">不参加: </span>
+                        <span className="text-gray-700">
+                          {nonAttendees.slice(0, 5).map((user: any, index: number) => (
+                            <span key={user.id}>
+                              {user.display_name}
+                              {user.jersey_number && (
+                                <span className="text-xs text-gray-500">({user.jersey_number})</span>
+                              )}
+                              {index < Math.min(nonAttendees.length, 5) - 1 && ', '}
+                            </span>
+                          ))}
+                          {nonAttendees.length > 5 && (
+                            <span className="text-gray-500"> 他{nonAttendees.length - 5}名</span>
                           )}
                         </span>
                       </div>
