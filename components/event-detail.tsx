@@ -40,21 +40,38 @@ interface Attendance {
   }
 }
 
+interface EventGuest {
+  id: string
+  event_id: string
+  user_id: string
+  guest_count: number
+  comment: string | null
+  users: {
+    display_name: string
+    jersey_number: number | null
+  }
+}
+
 interface EventDetailProps {
   event: Event
   attendances: Attendance[]
+  eventGuests: EventGuest[]
   myAttendance: Attendance | null
   userId: string
   isAdmin: boolean
 }
 
-export default function EventDetail({ event, attendances, myAttendance, userId, isAdmin }: EventDetailProps) {
+export default function EventDetail({ event, attendances, eventGuests, myAttendance, userId, isAdmin }: EventDetailProps) {
   const router = useRouter()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [comment, setComment] = useState(myAttendance?.comment || '')
-  const [guestCount, setGuestCount] = useState(event.guest_count.toString())
-  const [isEditingGuest, setIsEditingGuest] = useState(false)
+
+  // ゲスト追加・編集用State
+  const [guestCount, setGuestCount] = useState('1')
+  const [guestComment, setGuestComment] = useState('')
+  const [isAddingGuest, setIsAddingGuest] = useState(false)
+  const [editingGuestId, setEditingGuestId] = useState<string | null>(null)
 
   const handleAttendance = async (status: 'attending' | 'not_attending' | 'undecided') => {
     setIsLoading(true)
@@ -83,7 +100,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
       }
 
       router.refresh()
-      
+
       // 少し遅延させてからローディング解除（視覚的フィードバック）
       setTimeout(() => {
         setIsLoading(false)
@@ -94,24 +111,77 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
     }
   }
 
-  const handleUpdateGuestCount = async () => {
+  const handleSaveGuest = async () => {
+    if (parseInt(guestCount) < 1) {
+      alert('助っ人は1人以上を指定してください')
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('events')
-        .update({ guest_count: parseInt(guestCount) || 0 })
-        .eq('id', event.id)
+      if (editingGuestId) {
+        // 更新
+        const { error } = await supabase
+          .from('event_guests')
+          .update({
+            guest_count: parseInt(guestCount),
+            comment: guestComment || null
+          })
+          .eq('id', editingGuestId)
 
-      if (error) throw error
+        if (error) throw error
+      } else {
+        // 新規追加
+        const { error } = await supabase
+          .from('event_guests')
+          .insert({
+            event_id: event.id,
+            user_id: userId,
+            guest_count: parseInt(guestCount),
+            comment: guestComment || null
+          })
 
-      setIsEditingGuest(false)
+        if (error) throw error
+      }
+
+      setIsAddingGuest(false)
+      setEditingGuestId(null)
+      setGuestCount('1')
+      setGuestComment('')
       router.refresh()
     } catch (error: any) {
       alert(error.message || 'エラーが発生しました')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDeleteGuest = async (guestId: string) => {
+    if (!confirm('この助っ人情報を削除しますか？')) return
+
+    setIsLoading(true)
+    try {
+      const { error } = await supabase
+        .from('event_guests')
+        .delete()
+        .eq('id', guestId)
+
+      if (error) throw error
+
+      router.refresh()
+    } catch (error: any) {
+      alert(error.message || 'エラーが発生しました')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const startEditGuest = (guest: EventGuest) => {
+    setEditingGuestId(guest.id)
+    setGuestCount(guest.guest_count.toString())
+    setGuestComment(guest.comment || '')
+    setIsAddingGuest(true)
   }
 
   const handleDeleteEvent = async () => {
@@ -223,68 +293,137 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
       </Card>
 
       {/* 助っ人（ゲスト）管理 */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <UserPlus className="w-5 h-5 mr-2" />
-              助っ人（ゲスト）
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isEditingGuest ? (
-              <div className="flex items-center space-x-2">
-                <Input
-                  type="number"
-                  value={guestCount}
-                  onChange={(e) => setGuestCount(e.target.value)}
-                  min="0"
-                  disabled={isLoading}
-                  className="w-24"
-                />
-                <span>人</span>
-                <Button
-                  size="sm"
-                  onClick={handleUpdateGuestCount}
-                  disabled={isLoading}
-                  className="transition-all active:scale-95"
-                >
-                  {isLoading ? '保存中...' : '保存'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditingGuest(false)
-                    setGuestCount(event.guest_count.toString())
-                  }}
-                  disabled={isLoading}
-                  className="transition-all active:scale-95"
-                >
-                  キャンセル
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold">
-                  {event.guest_count}人
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditingGuest(true)}
-                  className="transition-all active:scale-95"
-                >
-                  編集
-                </Button>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-lg flex items-center">
+            <UserPlus className="w-5 h-5 mr-2" />
+            助っ人（ゲスト）
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              計 {event.guest_count}人
+            </span>
+          </CardTitle>
+          {!isAddingGuest && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingGuestId(null)
+                setGuestCount('1')
+                setGuestComment('')
+                setIsAddingGuest(true)
+              }}
+              disabled={isLoading}
+              className="transition-all active:scale-95 text-sm h-9 px-3"
+            >
+              追加する
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4 pt-2">
+            {/* 入力フォーム */}
+            {isAddingGuest && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-3 mb-4">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="guestCount" className="whitespace-nowrap">人数</Label>
+                  <Input
+                    id="guestCount"
+                    type="number"
+                    value={guestCount}
+                    onChange={(e) => setGuestCount(e.target.value)}
+                    min="1"
+                    disabled={isLoading}
+                    className="w-24 bg-white"
+                  />
+                  <span>人</span>
+                </div>
+                <div>
+                  <Label htmlFor="guestComment" className="text-sm">メモ・名前など（任意）</Label>
+                  <Input
+                    id="guestComment"
+                    value={guestComment}
+                    onChange={(e) => setGuestComment(e.target.value)}
+                    placeholder="例: 佐藤の友人"
+                    disabled={isLoading}
+                    className="bg-white mt-1"
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddingGuest(false)
+                      setEditingGuestId(null)
+                    }}
+                    disabled={isLoading}
+                    className="transition-all active:scale-95 bg-white text-sm h-8 px-3"
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={handleSaveGuest}
+                    disabled={isLoading}
+                    className="transition-all active:scale-95 text-sm h-8 px-3"
+                  >
+                    {isLoading ? '保存中...' : '保存'}
+                  </Button>
+                </div>
               </div>
             )}
-            <p className="text-sm text-gray-500 mt-2">
-              アプリに登録していない助っ人の人数を追加できます
-            </p>
-          </CardContent>
-        </Card>
-      )}
+
+            {/* ゲスト一覧リスト */}
+            {eventGuests.length === 0 ? (
+              <p className="text-sm text-gray-500">登録されている助っ人はいません</p>
+            ) : (
+              <div className="space-y-2">
+                {eventGuests.map((guest) => {
+                  const canEdit = isAdmin || guest.user_id === userId
+                  return (
+                    <div
+                      key={guest.id}
+                      className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-100"
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900 flex items-center">
+                          <span className="text-blue-600 mr-2">{guest.guest_count}人</span>
+                          <span className="text-sm text-gray-500 font-normal">
+                            (登録: {guest.users?.display_name})
+                          </span>
+                        </div>
+                        {guest.comment && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {guest.comment}
+                          </p>
+                        )}
+                      </div>
+                      {canEdit && (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            variant="ghost"
+                            className="h-8 px-2 text-gray-500"
+                            onClick={() => startEditGuest(guest)}
+                            disabled={isLoading}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteGuest(guest.id)}
+                            disabled={isLoading}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 出欠登録 */}
       <Card>
@@ -294,7 +433,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
         <CardContent className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <Button
-              variant={currentStatus === 'attending' ? 'default' : 'outline'}
+              variant={(currentStatus === 'attending' ? 'default' : 'outline') as any}
               onClick={() => handleAttendance('attending')}
               disabled={isLoading}
               className="h-16 text-base font-semibold transition-all active:scale-95 active:opacity-80"
@@ -302,7 +441,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
               {isLoading ? '登録中...' : '参加'}
             </Button>
             <Button
-              variant={currentStatus === 'not_attending' ? 'destructive' : 'outline'}
+              variant={(currentStatus === 'not_attending' ? 'destructive' : 'outline') as any}
               onClick={() => handleAttendance('not_attending')}
               disabled={isLoading}
               className="h-16 text-base font-semibold transition-all active:scale-95 active:opacity-80"
@@ -310,7 +449,7 @@ export default function EventDetail({ event, attendances, myAttendance, userId, 
               {isLoading ? '登録中...' : '不参加'}
             </Button>
             <Button
-              variant={currentStatus === 'undecided' ? 'secondary' : 'outline'}
+              variant={(currentStatus === 'undecided' ? 'secondary' : 'outline') as any}
               onClick={() => handleAttendance('undecided')}
               disabled={isLoading}
               className="h-16 text-base font-semibold transition-all active:scale-95 active:opacity-80"

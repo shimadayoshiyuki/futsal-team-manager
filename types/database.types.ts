@@ -48,7 +48,6 @@ export interface Database {
           end_time: string
           max_participants: number | null
           participation_fee: number
-          guest_count: number
           created_by: string | null
           created_at: string
           updated_at: string
@@ -62,7 +61,6 @@ export interface Database {
           end_time: string
           max_participants?: number | null
           participation_fee?: number
-          guest_count?: number
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -76,7 +74,6 @@ export interface Database {
           end_time?: string
           max_participants?: number | null
           participation_fee?: number
-          guest_count?: number
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -135,6 +132,35 @@ export interface Database {
           sent_at?: string
           status?: string
           error_message?: string | null
+        }
+      }
+      event_guests: {
+        Row: {
+          id: string
+          event_id: string
+          user_id: string
+          guest_count: number
+          comment: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          user_id: string
+          guest_count: number
+          comment?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          user_id?: string
+          guest_count?: number
+          comment?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
     }

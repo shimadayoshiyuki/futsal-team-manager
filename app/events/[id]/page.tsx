@@ -9,17 +9,17 @@ import { cookies } from 'next/headers'
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  
+
   // Supabase Auth チェック
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   // チームログインセッションチェック
   const cookieStore = await cookies()
   const teamSession = cookieStore.get('team_session')
-  
+
   let userId: string
   let profile = null
-  
+
   if (user) {
     // Supabase Auth ユーザー
     userId = user.id
@@ -28,9 +28,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       .select('*')
       .eq('id', user.id)
       .single()
-    
+
     profile = data
-    
+
     if (!profile) {
       redirect('/profile/setup')
     }
@@ -44,9 +44,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         .select('*')
         .eq('id', session.userId)
         .single()
-      
+
       profile = data
-      
+
       if (!profile) {
         // セッションが無効
         cookieStore.delete('team_session')
@@ -84,6 +84,18 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     `)
     .eq('event_id', id)
 
+  // ゲスト情報の取得
+  const { data: eventGuests } = await supabase
+    .from('event_guests')
+    .select(`
+      *,
+      users (
+        display_name,
+        jersey_number
+      )
+    `)
+    .eq('event_id', id)
+
   // 自分の出欠情報の取得
   const { data: myAttendance } = await supabase
     .from('attendances')
@@ -105,6 +117,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         <EventDetail
           event={event}
           attendances={attendances || []}
+          eventGuests={eventGuests || []}
           myAttendance={myAttendance}
           userId={userId}
           isAdmin={profile.is_admin}

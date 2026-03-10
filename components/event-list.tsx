@@ -62,7 +62,7 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
   const getMyStatus = (eventId: string) => {
     return myAttendances.find(a => a.event_id === eventId)
   }
-  
+
   const getEventAttendees = (eventId: string) => {
     return allAttendances
       .filter(a => a.event_id === eventId && a.status === 'attending')
@@ -93,13 +93,13 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold text-gray-900 mb-4">今後の予定</h2>
-      
+
       {events.map((event) => {
         const myStatus = getMyStatus(event.id)
         const isFull = event.max_participants && event.total_participants >= event.max_participants
         const attendees = getEventAttendees(event.id)
         const nonAttendees = getEventNonAttendees(event.id)
-        
+
         return (
           <Link key={event.id} href={`/events/${event.id}`}>
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
@@ -115,7 +115,7 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
                   )}
                 </div>
               </CardHeader>
-              
+
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex items-center text-sm text-gray-600">
@@ -124,19 +124,19 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
                       {format(new Date(event.start_time), 'M月d日(E) HH:mm', { locale: ja })}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="w-4 h-4 mr-2" />
                     <span>
                       {format(new Date(event.start_time), 'HH:mm', { locale: ja })} - {format(new Date(event.end_time), 'HH:mm', { locale: ja })}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPin className="w-4 h-4 mr-2" />
                     <span>{event.location}</span>
                   </div>
-                  
+
                   {/* 参加者名表示 */}
                   {attendees.length > 0 && (
                     <div className="flex items-start text-sm text-gray-600 pt-2">
@@ -184,7 +184,7 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center justify-between mt-4 pt-3 border-t">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center text-sm">
@@ -196,7 +196,7 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
                           <span className="text-gray-500 ml-1">/ {event.max_participants}人</span>
                         )}
                       </div>
-                      
+
                       {event.participation_fee > 0 && (
                         <div className="flex items-center text-sm text-gray-600">
                           <DollarSign className="w-4 h-4 mr-1" />
@@ -204,7 +204,7 @@ export default function EventList({ events, myAttendances, allAttendances, isAdm
                         </div>
                       )}
                     </div>
-                    
+
                     {isFull && (
                       <span className="text-sm font-medium text-red-600">
                         満員
