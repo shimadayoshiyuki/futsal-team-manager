@@ -48,7 +48,7 @@ export default function CreateEventPage() {
       const startDateTime = `${formData.start_date}T${formData.start_time}:00+09:00`
       const endDateTime = `${formData.start_date}T${formData.end_time}:00+09:00`
 
-      const { error: insertError } = await supabase
+      const { data: newEvent, error: insertError } = await supabase
         .from('events')
         .insert({
           title: formData.title,
@@ -59,9 +59,29 @@ export default function CreateEventPage() {
           max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
           participation_fee: parseInt(formData.participation_fee) || 0,
           created_by: user.id,
-        })
+        } as any)
+        .select()
+        .single()
 
       if (insertError) throw insertError
+
+      // LINE NotifyのAPIを呼び出して通知を送信
+      if (newEvent) {
+        try {
+          await fetch('/api/notify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              eventId: (newEvent as any).id,
+              type: 'event_created',
+            }),
+          })
+        } catch (notifyError) {
+          console.error('LINE通知の送信に失敗しました:', notifyError)
+        }
+      }
 
       router.push('/')
       router.refresh()

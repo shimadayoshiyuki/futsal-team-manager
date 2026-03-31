@@ -16,11 +16,11 @@ export async function POST(request: Request) {
     const supabase = await createClient()
 
     // イベント情報を取得
-    const { data: event } = await supabase
+    const { data: event } = (await supabase
       .from('events')
       .select('*')
       .eq('id', eventId)
-      .single()
+      .single()) as any
 
     if (!event) {
       return NextResponse.json(
@@ -29,13 +29,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // LINE Notify トークンの確認
-    const lineNotifyToken = process.env.LINE_NOTIFY_TOKEN
+    // LINE Messaging API トークンと送信先の確認
+    const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN
+    const groupId = process.env.LINE_GROUP_ID
 
-    if (!lineNotifyToken) {
-      console.error('LINE_NOTIFY_TOKEN is not set')
+    if (!channelAccessToken || !groupId) {
+      console.error('LINE_CHANNEL_ACCESS_TOKEN or LINE_GROUP_ID is not set')
       return NextResponse.json(
-        { error: 'LINE Notify token is not configured' },
+        { error: 'LINE Messaging API credentials are not configured' },
         { status: 500 }
       )
     }
@@ -46,14 +47,22 @@ export async function POST(request: Request) {
       ? `\n⚽ 新しいイベントが作成されました！\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 ${startDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })} ${startDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}\n\n出欠登録をお願いします！`
       : `\n⚽ イベントのリマインダー\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 明日 ${startDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}\n\n出欠登録がまだの方はお願いします！`
 
-    // LINE Notify API呼び出し
-    const response = await fetch('https://notify-api.line.me/api/notify', {
+    // LINE Messaging API (Push Message) 呼び出し
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lineNotifyToken}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${channelAccessToken}`,
       },
-      body: `message=${encodeURIComponent(message)}`,
+      body: JSON.stringify({
+        to: groupId,
+        messages: [
+          {
+            type: 'text',
+            text: message.trim()
+          }
+        ]
+      }),
     })
 
     if (!response.ok) {
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
       event_id: eventId,
       notification_type: type,
       status: 'sent',
-    })
+    } as any)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
@@ -79,7 +88,7 @@ export async function POST(request: Request) {
       notification_type: type,
       status: 'failed',
       error_message: error.message,
-    })
+    } as any)
 
     return NextResponse.json(
       { error: error.message || 'Failed to send notification' },
