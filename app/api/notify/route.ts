@@ -43,9 +43,15 @@ export async function POST(request: Request) {
 
     // メッセージの構築
     const startDate = new Date(event.start_time)
+    const optionsDate: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Tokyo', month: 'short', day: 'numeric', weekday: 'short' }
+    const optionsTime: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' }
+    
+    const formattedDate = startDate.toLocaleDateString('ja-JP', optionsDate)
+    const formattedTime = startDate.toLocaleTimeString('ja-JP', optionsTime)
+
     const message = type === 'event_created'
-      ? `\n⚽ 新しいイベントが作成されました！\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 ${startDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })} ${startDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}\n\n出欠登録をお願いします！`
-      : `\n⚽ イベントのリマインダー\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 明日 ${startDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}\n\n出欠登録がまだの方はお願いします！`
+      ? `\n⚽ 新しいイベントが作成されました！\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 ${formattedDate} ${formattedTime}\n\n出欠登録をお願いします！`
+      : `\n⚽ イベントのリマインダー\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 明日 ${formattedTime}\n\n出欠登録がまだの方はお願いします！`
 
     // LINE Messaging API (Push Message) 呼び出し
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
