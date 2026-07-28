@@ -118,7 +118,7 @@ export default function LoginPage() {
           <Tabs defaultValue="team" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="team">チームログイン</TabsTrigger>
-              <TabsTrigger value="account">個人アカウント</TabsTrigger>
+              <TabsTrigger value="account">管理アカウント</TabsTrigger>
             </TabsList>
             
             <TabsContent value="team" className="space-y-4">
