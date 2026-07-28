@@ -32,7 +32,8 @@ CREATE POLICY "Users can view their own profile"
 CREATE POLICY "Users can update their own profile"
   ON public.users
   FOR UPDATE
-  USING (auth.uid() = id);
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id); -- 自分でis_adminをtrueにできないようにする
 
 -- ポリシー: 認証済みユーザーは全ユーザーを閲覧できる（参加者リスト表示用）
 CREATE POLICY "Authenticated users can view all users"
@@ -45,6 +46,14 @@ CREATE POLICY "Users can insert their own profile"
   ON public.users
   FOR INSERT
   WITH CHECK (auth.uid() = id);
+
+-- 列単位の権限: emailを公開鍵（anon）から隠す
+-- RLSは行の出し分けしかできないため、列を隠すにはGRANTで絞る必要がある。
+-- チームログインが anon で users を検索する実装のため、名簿列の読み取りは維持する。
+-- 詳細は supabase/fix-users-email-exposure.sql を参照。
+REVOKE SELECT ON public.users FROM anon, authenticated;
+GRANT SELECT (id, display_name, jersey_number, is_admin)
+  ON public.users TO anon, authenticated;
 
 -- ============================================
 -- 2. Events テーブル（イベント情報）

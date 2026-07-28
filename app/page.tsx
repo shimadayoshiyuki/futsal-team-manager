@@ -20,7 +20,7 @@ export default async function HomePage() {
     // Supabase Auth ユーザー
     const { data } = await supabase
       .from('users')
-      .select('*')
+      .select('id, display_name, jersey_number, is_admin')
       .eq('id', user.id)
       .single()
     
@@ -35,7 +35,7 @@ export default async function HomePage() {
       const session = JSON.parse(teamSession.value)
       const { data } = await supabase
         .from('users')
-        .select('*')
+        .select('id, display_name, jersey_number, is_admin')
         .eq('id', session.userId)
         .single()
       
