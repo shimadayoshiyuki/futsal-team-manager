@@ -14,7 +14,7 @@ export default async function HomePage() {
   const cookieStore = await cookies()
   const teamSession = cookieStore.get('team_session')
   
-  let profile = null
+  let profile: any = null
   
   if (user) {
     // Supabase Auth ユーザー
@@ -55,11 +55,19 @@ export default async function HomePage() {
     redirect('/auth/login')
   }
 
+  // JSTでの本日の始まり（00:00:00）を計算してイベント一覧を取得
+  // これにより、開始時刻を過ぎてもその日が終わるまでスケジュールが表示されるようになります
+  const now = new Date()
+  const jstOffset = 9 * 60 * 60 * 1000
+  const jstTime = new Date(now.getTime() + jstOffset)
+  jstTime.setUTCHours(0, 0, 0, 0)
+  const startOfTodayJST = new Date(jstTime.getTime() - jstOffset)
+
   // イベント一覧の取得（event_detailsビューを使用）
   const { data: events } = await supabase
     .from('event_details')
     .select('*')
-    .gte('start_time', new Date().toISOString())
+    .gte('start_time', startOfTodayJST.toISOString())
     .order('start_time', { ascending: true })
     .limit(50)
 
