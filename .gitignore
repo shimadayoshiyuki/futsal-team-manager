@@ -27,6 +27,12 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env*
+# ファイル名を変えたりrtf化した環境変数ファイルの取りこぼしを防ぐ
+*env.local*
+*.rtf
+# サンプルだけは追跡する（否定パターンは最後に置く必要がある）
+!.env.local.example
 
 # vercel
 .vercel

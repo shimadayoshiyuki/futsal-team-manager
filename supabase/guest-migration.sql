@@ -21,27 +21,27 @@ CREATE INDEX idx_event_guests_user_id ON public.event_guests(user_id);
 ALTER TABLE public.event_guests ENABLE ROW LEVEL SECURITY;
 
 -- Policies for event_guests
-CREATE POLICY "Authenticated users can view all event guests"
+CREATE POLICY "Anyone can view all event guests"
   ON public.event_guests
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
 CREATE POLICY "Users can insert their own event guests"
   ON public.event_guests
   FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid() = user_id OR auth.role() = 'anon');
 
 CREATE POLICY "Users can update their own event guests"
   ON public.event_guests
   FOR UPDATE
-  USING (auth.uid() = user_id OR EXISTS (
+  USING (auth.uid() = user_id OR auth.role() = 'anon' OR EXISTS (
     SELECT 1 FROM public.users WHERE id = auth.uid() AND is_admin = TRUE
   ));
 
 CREATE POLICY "Users can delete their own event guests"
   ON public.event_guests
   FOR DELETE
-  USING (auth.uid() = user_id OR EXISTS (
+  USING (auth.uid() = user_id OR auth.role() = 'anon' OR EXISTS (
     SELECT 1 FROM public.users WHERE id = auth.uid() AND is_admin = TRUE
   ));
 
@@ -66,8 +66,8 @@ SELECT
   COUNT(CASE WHEN a.status = 'attending' THEN 1 END) AS attending_count,
   COUNT(CASE WHEN a.status = 'not_attending' THEN 1 END) AS not_attending_count,
   COUNT(CASE WHEN a.status = 'undecided' THEN 1 END) AS undecided_count,
-  COALESCE(SUM(g.guest_count), 0) AS guest_count,
-  (COUNT(CASE WHEN a.status = 'attending' THEN 1 END) + COALESCE(SUM(g.guest_count), 0)) AS total_participants
+  COALESCE(g.guest_count, 0) AS guest_count,
+  (COUNT(CASE WHEN a.status = 'attending' THEN 1 END) + COALESCE(g.guest_count, 0)) AS total_participants
 FROM public.events e
 LEFT JOIN public.attendances a ON e.id = a.event_id
 LEFT JOIN (
