@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -8,31 +8,112 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Copy } from 'lucide-react'
 import Link from 'next/link'
+
+interface PastEvent {
+  id: string
+  title: string
+  description: string | null
+  location: string
+  start_time: string
+  end_time: string
+  max_participants: number | null
+  participation_fee: number
+}
+
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  location: '',
+  start_date: '',
+  start_time: '',
+  end_time: '',
+  max_participants: '',
+  participation_fee: '0',
+}
+
+// DBはUTCのtimestamptz、保存時は+09:00固定（handleSubmit参照）なので、
+// 取り出す側も日本時間で固定して端末のタイムゾーンに引きずられないようにする
+const JST = 'Asia/Tokyo'
+
+const toJstTimeValue = (isoString: string) =>
+  new Date(isoString).toLocaleTimeString('sv-SE', {
+    timeZone: JST,
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+const formatPastEventLabel = (event: PastEvent) => {
+  const date = new Date(event.start_time).toLocaleDateString('ja-JP', {
+    timeZone: JST,
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  })
+  return `${date} ${toJstTimeValue(event.start_time)} ${event.title} / ${event.location}`
+}
 
 export default function CreateEventPage() {
   const router = useRouter()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    location: '',
-    start_date: '',
-    start_time: '',
-    end_time: '',
-    max_participants: '',
-    participation_fee: '0',
-  })
+
+  const [pastEvents, setPastEvents] = useState<PastEvent[]>([])
+  const [sourceEventId, setSourceEventId] = useState('')
+
+  const [formData, setFormData] = useState(EMPTY_FORM)
+
+  useEffect(() => {
+    const fetchPastEvents = async () => {
+      // events の RLS は authenticated 限定。イベント作成自体が管理アカウント
+      // （Supabase Auth）でのログインを前提としているため、ここも同じ前提で引く
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, description, location, start_time, end_time, max_participants, participation_fee')
+        .order('start_time', { ascending: false })
+        .limit(20)
+
+      // 複製はあくまで補助機能なので、取得に失敗してもフォーム自体は使えるようにする
+      if (!error && data) setPastEvents(data as any)
+    }
+
+    fetchPastEvents()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     })
+  }
+
+  const handleSourceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const eventId = e.target.value
+    setSourceEventId(eventId)
+
+    if (!eventId) return
+
+    const source = pastEvents.find(event => event.id === eventId)
+    if (!source) return
+
+    // 日付だけは意図的に空のままにする（過去の日付のまま登録される事故を防ぐ）
+    setFormData({
+      title: source.title,
+      description: source.description || '',
+      location: source.location,
+      start_date: '',
+      start_time: toJstTimeValue(source.start_time),
+      end_time: toJstTimeValue(source.end_time),
+      max_participants: source.max_participants?.toString() || '',
+      participation_fee: source.participation_fee?.toString() || '0',
+    })
+  }
+
+  const handleClear = () => {
+    setSourceEventId('')
+    setFormData(EMPTY_FORM)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,6 +189,46 @@ export default function CreateEventPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {pastEvents.length > 0 && (
+                <div className="space-y-2 rounded-lg bg-gray-50 border p-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="source_event" className="flex items-center gap-1.5">
+                      <Copy className="w-4 h-4 text-gray-500" />
+                      過去の予定から複製（任意）
+                    </Label>
+                    {sourceEventId && (
+                      <button
+                        type="button"
+                        onClick={handleClear}
+                        disabled={isLoading}
+                        className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                      >
+                        入力をクリア
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    id="source_event"
+                    value={sourceEventId}
+                    onChange={handleSourceChange}
+                    disabled={isLoading}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">選択しない（新規作成）</option>
+                    {pastEvents.map(event => (
+                      <option key={event.id} value={event.id}>
+                        {formatPastEventLabel(event)}
+                      </option>
+                    ))}
+                  </select>
+                  {sourceEventId && (
+                    <p className="text-xs text-gray-600">
+                      内容を引き継ぎました。日付を入力してください。
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="title">
                   タイトル<span className="text-red-500">*</span>
