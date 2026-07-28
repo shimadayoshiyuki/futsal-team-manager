@@ -208,16 +208,25 @@ CREATE TRIGGER update_attendances_updated_at BEFORE UPDATE ON public.attendances
 -- ============================================
 -- 6. ビュー: イベント詳細（参加人数含む）
 -- ============================================
+DROP VIEW IF EXISTS event_details;
 CREATE OR REPLACE VIEW event_details AS
 SELECT 
-  e.*,
+  e.id, e.title, e.description, e.location, e.start_time, e.end_time,
+  e.max_participants, e.participation_fee, e.created_by, e.created_at, e.updated_at,
   COUNT(CASE WHEN a.status = 'attending' THEN 1 END) AS attending_count,
   COUNT(CASE WHEN a.status = 'not_attending' THEN 1 END) AS not_attending_count,
   COUNT(CASE WHEN a.status = 'undecided' THEN 1 END) AS undecided_count,
-  (COUNT(CASE WHEN a.status = 'attending' THEN 1 END) + e.guest_count) AS total_participants
+  COALESCE(g.guest_count, 0) AS guest_count,
+  (COUNT(CASE WHEN a.status = 'attending' THEN 1 END) + COALESCE(g.guest_count, 0)) AS total_participants
 FROM public.events e
 LEFT JOIN public.attendances a ON e.id = a.event_id
-GROUP BY e.id;
+LEFT JOIN (
+  SELECT event_id, SUM(guest_count) as guest_count
+  FROM public.event_guests
+  GROUP BY event_id
+) g ON e.id = g.event_id
+GROUP BY 
+  e.id, g.guest_count;
 
 -- ============================================
 -- 7. 初期データ投入（サンプル管理者）
