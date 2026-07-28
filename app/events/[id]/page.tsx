@@ -25,7 +25,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     userId = user.id
     const { data } = await supabase
       .from('users')
-      .select('*')
+      .select('id, display_name, jersey_number, is_admin')
       .eq('id', user.id)
       .single()
 
@@ -41,7 +41,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       userId = session.userId
       const { data } = await supabase
         .from('users')
-        .select('*')
+        .select('id, display_name, jersey_number, is_admin')
         .eq('id', session.userId)
         .single()
 

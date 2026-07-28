@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   if (user) {
     const { data } = await supabase
       .from('users')
-      .select('*')
+      .select('id, display_name, jersey_number, is_admin')
       .eq('id', user.id)
       .single()
     profile = data
@@ -26,7 +26,7 @@ export default async function SettingsPage() {
       const session = JSON.parse(teamSession.value)
       const { data } = await supabase
         .from('users')
-        .select('*')
+        .select('id, display_name, jersey_number, is_admin')
         .eq('id', session.userId)
         .single()
       profile = data
