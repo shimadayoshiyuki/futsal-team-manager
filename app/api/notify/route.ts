@@ -49,9 +49,19 @@ export async function POST(request: Request) {
     const formattedDate = startDate.toLocaleDateString('ja-JP', optionsDate)
     const formattedTime = startDate.toLocaleTimeString('ja-JP', optionsTime)
 
+    // サイトのURL（環境変数優先、なければリクエスト元から組み立て）
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+    const baseUrl = (
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      request.headers.get('origin') ||
+      (forwardedHost ? `${forwardedProto}://${forwardedHost}` : new URL(request.url).origin)
+    ).replace(/\/$/, '')
+    const eventUrl = `${baseUrl}/events/${eventId}`
+
     const message = type === 'event_created'
-      ? `\n⚽ 新しいイベントが作成されました！\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 ${formattedDate} ${formattedTime}\n\n出欠登録をお願いします！`
-      : `\n⚽ イベントのリマインダー\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 明日 ${formattedTime}\n\n出欠登録がまだの方はお願いします！`
+      ? `\n⚽ 新しいイベントが作成されました！\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 ${formattedDate} ${formattedTime}\n\n出欠登録をお願いします！\n${eventUrl}`
+      : `\n⚽ イベントのリマインダー\n\n📅 ${event.title}\n📍 ${event.location}\n🕐 明日 ${formattedTime}\n\n出欠登録がまだの方はお願いします！\n${eventUrl}`
 
     // LINE Messaging API (Push Message) 呼び出し
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
