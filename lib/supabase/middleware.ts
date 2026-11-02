@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { SESSION_COOKIE, verifySessionToken } from '@/lib/session'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -35,20 +36,17 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // チームログインのセッションをチェック
-  const teamSession = request.cookies.get('team_session')
-  let isTeamLoggedIn = false
-  
-  if (teamSession) {
-    try {
-      const session = JSON.parse(teamSession.value)
-      // セッションの有効期限をチェック
-      if (session.expiresAt && new Date(session.expiresAt) > new Date()) {
-        isTeamLoggedIn = true
-      }
-    } catch (e) {
-      // JSON parse error - invalid session
-    }
+  // チームログインのセッションをチェック（署名と有効期限を検証）
+  const teamSessionCookie = request.cookies.get(SESSION_COOKIE)?.value
+  const isTeamLoggedIn = !!(await verifySessionToken(teamSessionCookie))
+  // 署名が合わない・期限切れの Cookie はリダイレクト時に消す
+  const hasInvalidTeamSession = !!teamSessionCookie && !isTeamLoggedIn
+
+  // ページ側で「署名は正しいがユーザーが存在しない」と判定されたときは /auth/login?reset=1 に来る。
+  // Cookie を消してログイン画面を出す（消さないと / と /auth/login を往復し続けるため）
+  if (request.nextUrl.pathname === '/auth/login' && request.nextUrl.searchParams.has('reset')) {
+    supabaseResponse.cookies.delete(SESSION_COOKIE)
+    return supabaseResponse
   }
 
   // Supabase認証またはチームログインのいずれかでログイン済み
@@ -81,7 +79,11 @@ export async function updateSession(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    if (hasInvalidTeamSession) {
+      redirectResponse.cookies.delete(SESSION_COOKIE)
+    }
+    return redirectResponse
   }
 
   // 認証済みユーザーがログインページにアクセスしようとした場合

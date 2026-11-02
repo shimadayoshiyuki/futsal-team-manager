@@ -4,61 +4,26 @@ import EventDetail from '@/components/event-detail'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth'
 
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
 
-  // Supabase Auth チェック
-  const { data: { user } } = await supabase.auth.getUser()
+  // ログインユーザーの確認（Supabase Auth または 署名付きチームログインセッション）
+  const currentUser = await getCurrentUser()
 
-  // チームログインセッションチェック
-  const cookieStore = await cookies()
-  const teamSession = cookieStore.get('team_session')
-
-  let userId: string
-  let profile = null
-
-  if (user) {
-    // Supabase Auth ユーザー
-    userId = user.id
-    const { data } = await supabase
-      .from('users')
-      .select('id, display_name, jersey_number, is_admin')
-      .eq('id', user.id)
-      .single()
-
-    profile = data
-
-    if (!profile) {
-      redirect('/profile/setup')
-    }
-  } else if (teamSession) {
-    // チームログインユーザー
-    try {
-      const session = JSON.parse(teamSession.value)
-      userId = session.userId
-      const { data } = await supabase
-        .from('users')
-        .select('id, display_name, jersey_number, is_admin')
-        .eq('id', session.userId)
-        .single()
-
-      profile = data
-
-      if (!profile) {
-        // セッションが無効
-        cookieStore.delete('team_session')
-        redirect('/auth/login')
-      }
-    } catch (error) {
-      cookieStore.delete('team_session')
-      redirect('/auth/login')
-    }
-  } else {
+  if (!currentUser) {
     // 未認証
     redirect('/auth/login')
+  }
+
+  const userId = currentUser.userId
+  const profile = currentUser.profile
+
+  if (!profile) {
+    // Supabase Auth ならプロフィール未設定、チームログインならユーザーが消えた無効なセッション
+    redirect(currentUser.authType === 'supabase' ? '/profile/setup' : '/auth/login?reset=1')
   }
 
   // イベント詳細の取得

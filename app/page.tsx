@@ -2,57 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DashboardView from '@/components/dashboard-view'
 import Header from '@/components/header'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth'
 
 export default async function HomePage() {
   const supabase = await createClient()
-  
-  // Supabase Auth チェック
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  // チームログインセッションチェック
-  const cookieStore = await cookies()
-  const teamSession = cookieStore.get('team_session')
-  
-  let profile: any = null
-  
-  if (user) {
-    // Supabase Auth ユーザー
-    const { data } = await supabase
-      .from('users')
-      .select('id, display_name, jersey_number, is_admin')
-      .eq('id', user.id)
-      .single()
-    
-    profile = data
-    
-    if (!profile) {
-      redirect('/profile/setup')
-    }
-  } else if (teamSession) {
-    // チームログインユーザー
-    try {
-      const session = JSON.parse(teamSession.value)
-      const { data } = await supabase
-        .from('users')
-        .select('id, display_name, jersey_number, is_admin')
-        .eq('id', session.userId)
-        .single()
-      
-      profile = data
-      
-      if (!profile) {
-        // セッションが無効
-        cookieStore.delete('team_session')
-        redirect('/auth/login')
-      }
-    } catch (error) {
-      cookieStore.delete('team_session')
-      redirect('/auth/login')
-    }
-  } else {
+
+  // ログインユーザーの確認（Supabase Auth または 署名付きチームログインセッション）
+  const currentUser = await getCurrentUser()
+
+  if (!currentUser) {
     // 未認証
     redirect('/auth/login')
+  }
+
+  const profile = currentUser.profile
+
+  if (!profile) {
+    // Supabase Auth ならプロフィール未設定、チームログインならユーザーが消えた無効なセッション
+    redirect(currentUser.authType === 'supabase' ? '/profile/setup' : '/auth/login?reset=1')
   }
 
   // JSTでの本日の始まり（00:00:00）を計算してイベント一覧を取得

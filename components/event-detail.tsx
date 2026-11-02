@@ -73,31 +73,29 @@ export default function EventDetail({ event, attendances, eventGuests, myAttenda
   const [isAddingGuest, setIsAddingGuest] = useState(false)
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null)
 
+  // 出欠・助っ人の書き込みはサーバーのAPIを通す（誰の行かはサーバーがセッションから決める）
+  const callApi = async (url: string, method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>) => {
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      throw new Error(result.error || 'エラーが発生しました')
+    }
+  }
+
   const handleAttendance = async (status: 'attending' | 'not_attending' | 'undecided') => {
     setIsLoading(true)
 
     try {
-      if (myAttendance) {
-        // 更新
-        const { error } = await supabase
-          .from('attendances')
-          .update({ status, comment: comment || null })
-          .eq('id', myAttendance.id)
-
-        if (error) throw error
-      } else {
-        // 新規作成
-        const { error } = await supabase
-          .from('attendances')
-          .insert({
-            event_id: event.id,
-            user_id: userId,
-            status,
-            comment: comment || null,
-          })
-
-        if (error) throw error
-      }
+      // 既に回答していれば更新、なければ新規作成（サーバー側で判定）
+      await callApi('/api/attendances', 'POST', {
+        eventId: event.id,
+        status,
+        comment: comment || null,
+      })
 
       router.refresh()
 
@@ -122,27 +120,18 @@ export default function EventDetail({ event, attendances, eventGuests, myAttenda
     try {
       if (editingGuestId) {
         // 更新
-        const { error } = await supabase
-          .from('event_guests')
-          .update({
-            guest_count: parseInt(guestCount),
-            comment: guestComment || null
-          })
-          .eq('id', editingGuestId)
-
-        if (error) throw error
+        await callApi('/api/event-guests', 'PATCH', {
+          id: editingGuestId,
+          guestCount: parseInt(guestCount),
+          comment: guestComment || null,
+        })
       } else {
         // 新規追加
-        const { error } = await supabase
-          .from('event_guests')
-          .insert({
-            event_id: event.id,
-            user_id: userId,
-            guest_count: parseInt(guestCount),
-            comment: guestComment || null
-          })
-
-        if (error) throw error
+        await callApi('/api/event-guests', 'POST', {
+          eventId: event.id,
+          guestCount: parseInt(guestCount),
+          comment: guestComment || null,
+        })
       }
 
       setIsAddingGuest(false)
@@ -162,12 +151,7 @@ export default function EventDetail({ event, attendances, eventGuests, myAttenda
 
     setIsLoading(true)
     try {
-      const { error } = await supabase
-        .from('event_guests')
-        .delete()
-        .eq('id', guestId)
-
-      if (error) throw error
+      await callApi('/api/event-guests', 'DELETE', { id: guestId })
 
       router.refresh()
     } catch (error: any) {

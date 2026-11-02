@@ -2,40 +2,19 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/header'
 import SettingsForm from '@/components/settings-form'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
-  
-  // 認証チェック
-  const { data: { user } } = await supabase.auth.getUser()
-  const cookieStore = await cookies()
-  const teamSession = cookieStore.get('team_session')
-  
-  let profile = null
-  
-  if (user) {
-    const { data } = await supabase
-      .from('users')
-      .select('id, display_name, jersey_number, is_admin')
-      .eq('id', user.id)
-      .single()
-    profile = data
-  } else if (teamSession) {
-    try {
-      const session = JSON.parse(teamSession.value)
-      const { data } = await supabase
-        .from('users')
-        .select('id, display_name, jersey_number, is_admin')
-        .eq('id', session.userId)
-        .single()
-      profile = data
-    } catch (error) {
-      redirect('/auth/login')
-    }
-  } else {
+
+  // 認証チェック（Supabase Auth または 署名付きチームログインセッション）
+  const currentUser = await getCurrentUser()
+
+  if (!currentUser) {
     redirect('/auth/login')
   }
+
+  const profile = currentUser.profile
 
   // 管理者チェック
   if (!profile || !profile.is_admin) {
@@ -43,9 +22,10 @@ export default async function SettingsPage() {
   }
 
   // チーム設定を取得
+  // パスワードのハッシュ（team_password_hash）は画面に渡さない。anon からも読めないよう列の権限を絞っている
   const { data: teamSettings } = await supabase
     .from('team_settings')
-    .select('*')
+    .select('id, app_title')
     .single()
 
   return (
