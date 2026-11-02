@@ -1,12 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import DashboardView from '@/components/dashboard-view'
 import Header from '@/components/header'
 import { getCurrentUser } from '@/lib/auth'
 
 export default async function HomePage() {
-  const supabase = await createClient()
-
   // ログインユーザーの確認（Supabase Auth または 署名付きチームログインセッション）
   const currentUser = await getCurrentUser()
 
@@ -29,6 +27,10 @@ export default async function HomePage() {
   const jstTime = new Date(now.getTime() + jstOffset)
   jstTime.setUTCHours(0, 0, 0, 0)
   const startOfTodayJST = new Date(jstTime.getTime() - jstOffset)
+
+  // ここから下の読み取りは service role で行う（ログインの確認は上で済んでいる）。
+  // 公開されている anon キーでは名簿・出欠・イベントを読めないように権限を外している（security-04）
+  const supabase = createAdminClient()
 
   // イベント一覧の取得（event_detailsビューを使用）
   const { data: events } = await supabase

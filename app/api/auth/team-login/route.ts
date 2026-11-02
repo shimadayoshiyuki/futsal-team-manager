@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const ip = getClientIp(request)
 
   try {
-    if (isRateLimited(ip)) {
+    if (await isRateLimited(ip)) {
       return NextResponse.json(
         { error: 'ログインの失敗が続いたため、しばらくログインできません。15分ほど待ってからお試しください' },
         { status: 429 }
@@ -56,14 +56,14 @@ export async function POST(request: Request) {
     }
 
     if (passwordCheck !== true) {
-      recordFailure(ip)
+      await recordFailure(ip)
       return NextResponse.json(
         { error: 'パスワードが正しくありません' },
         { status: 401 }
       )
     }
 
-    clearFailures(ip)
+    await clearFailures(ip)
 
     // 2. ユーザーを検索または作成
     let userId: string

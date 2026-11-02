@@ -1,12 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Header from '@/components/header'
 import SettingsForm from '@/components/settings-form'
 import { getCurrentUser } from '@/lib/auth'
 
 export default async function SettingsPage() {
-  const supabase = await createClient()
-
   // 認証チェック（Supabase Auth または 署名付きチームログインセッション）
   const currentUser = await getCurrentUser()
 
@@ -20,6 +18,9 @@ export default async function SettingsPage() {
   if (!profile || !profile.is_admin) {
     redirect('/')
   }
+
+  // 読み取りは service role で行う（管理者の確認は上で済んでいる）。anon からは読めないようにしている（security-04）
+  const supabase = createAdminClient()
 
   // チーム設定を取得
   // パスワードのハッシュ（team_password_hash）は画面に渡さない。anon からも読めないよう列の権限を絞っている

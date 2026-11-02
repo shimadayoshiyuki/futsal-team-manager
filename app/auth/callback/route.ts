@@ -4,7 +4,13 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  // 移動先はサイト内のパス（"/" 始まり）だけにする。"@example.com" のような値だと、前に付けるドメインと
+  // 合わさって "https://本来のドメイン@example.com"（＝example.com への移動）になってしまうため。
+  // "//" と "/\" で始まる値も念のため外す
+  const nextParam = searchParams.get('next') ?? '/'
+  const next = nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.startsWith('/\\')
+    ? nextParam
+    : '/'
 
   if (code) {
     const supabase = await createClient()
